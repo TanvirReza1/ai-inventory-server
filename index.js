@@ -5,34 +5,8 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 
 // index.js
-const decoded = Buffer.from(
-  process.env.FIREBASE_SERVICE_KEY,
-  "base64"
-).toString("utf8");
-const serviceAccount = JSON.parse(decoded);
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
 
-async function verifyToken(req, res, next) {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader?.startsWith("Bearer ")) {
-    return res.status(401).send({ message: "Unauthorized: No token provided" });
-  }
-
-  const token = authHeader.split(" ")[1];
-
-  try {
-    const decodedUser = await admin.auth().verifyIdToken(token);
-    req.decodedEmail = decodedUser.email; // ✅ Save user email for later checks
-    next();
-  } catch (error) {
-    console.error("Token verification failed:", error);
-    return res.status(403).send({ message: "Forbidden: Invalid token" });
-  }
-}
 
 const uri = `mongodb+srv://${process.env.DB_NAME}:${process.env.DB_PASS}@cluster0.2q88fqm.mongodb.net/?appName=Cluster0`;
 
@@ -143,7 +117,7 @@ async function run() {
     });
 
     // DELETE model (only creator can delete)
-    app.delete("/models/:id", verifyToken, async (req, res) => {
+    app.delete("/models/:id", async (req, res) => {
       const id = req.params.id;
       const requesterEmail = req.decodedEmail; // ✅ Verified from Firebase token
 
@@ -174,7 +148,7 @@ async function run() {
     });
 
     // updateModel
-    app.put("/models/:id", verifyToken, async (req, res) => {
+    app.put("/models/:id", async (req, res) => {
       const id = req.params.id;
       const updatedModel = req.body;
       const requesterEmail = req.decodedEmail; // decoded from Firebase token
