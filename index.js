@@ -6,8 +6,6 @@ require("dotenv").config();
 
 // index.js
 
-
-
 const uri = `mongodb+srv://${process.env.DB_NAME}:${process.env.DB_PASS}@cluster0.2q88fqm.mongodb.net/?appName=Cluster0`;
 
 //   middleware
@@ -119,20 +117,12 @@ async function run() {
     // DELETE model (only creator can delete)
     app.delete("/models/:id", async (req, res) => {
       const id = req.params.id;
-      const requesterEmail = req.decodedEmail; // ✅ Verified from Firebase token
 
       try {
         const model = await models.findOne({ _id: new ObjectId(id) });
 
         if (!model) {
           return res.status(404).send({ message: "Model not found" });
-        }
-
-        // ✅ Only the creator can delete
-        if (model.createdBy !== requesterEmail) {
-          return res.status(403).send({
-            message: "Unauthorized: Only creator can delete this model",
-          });
         }
 
         const result = await models.deleteOne({ _id: new ObjectId(id) });
@@ -151,7 +141,6 @@ async function run() {
     app.put("/models/:id", async (req, res) => {
       const id = req.params.id;
       const updatedModel = req.body;
-      const requesterEmail = req.decodedEmail; // decoded from Firebase token
 
       try {
         const existingModel = await models.findOne({ _id: new ObjectId(id) });
@@ -160,30 +149,18 @@ async function run() {
           return res.status(404).send({ message: "Model not found" });
         }
 
-        // ✅ Check if the logged-in user is the creator
-        if (existingModel.createdBy !== requesterEmail) {
-          return res
-            .status(403)
-            .send({ message: "Unauthorized to update this model" });
-        }
-
-        // ✅ Perform the update
         const result = await models.updateOne(
           { _id: new ObjectId(id) },
           { $set: updatedModel }
         );
 
         if (result.modifiedCount > 0) {
-          // ✅ Tell frontend to redirect to the updated model details page
           res.send({
             success: true,
             message: "Model updated successfully",
-            redirectUrl: `/models/${id}`,
           });
         } else {
-          res
-            .status(400)
-            .send({ message: "No changes were made to the model" });
+          res.status(400).send({ message: "No changes were made" });
         }
       } catch (error) {
         console.error("Error updating model:", error);
